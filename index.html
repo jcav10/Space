@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+        }
+
+        canvas {
+            /* Remove the border */
+        }
+
+        #planet-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+        }
+
+        #speed-label {
+            position: absolute;
+            top: 220px; /* Adjust the vertical position as needed */
+            left: 20px;
+            color: white;
+        }
+
+        #planet-speed {
+            position: absolute;
+            top: 250px; /* Adjust the vertical position as needed */
+            left: 20px;
+        }
+
+        #toggle-rotation-button {
+            position: absolute;
+            top: 280px; /* Adjust the vertical position as needed */
+            left: 20px;
+        }
+
+        /* Style to change cursor when hovering over a planet */
+        canvas.planet-hover {
+            cursor: pointer;
+        }
+
+        /* Container for planet descriptions */
+        #planet-descriptions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            color: white;
+        }
+
+        /* Style for planet descriptions */
+        .planet-description {
+            margin-bottom: 20px;
+            font-size: 16px; /* Larger font size */
+        }
+
+        /* Style for Wikipedia links */
+        .wikipedia-link {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .wikipedia-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Container for website links at the bottom right */
+        #website-links {
+            position: absolute;
+            bottom: 20px; /* Position at the bottom */
+            right: 20px; /* Position on the right side */
+            color: white;
+        }
+
+        #website-links ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #website-links li {
+            margin-bottom: 10px;
+        }
+
+        .website-link {
+            color: #e74c3c; /* Change link color */
+            text-decoration: none;
+        }
+
+        .website-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="solar-system-canvas"></canvas>
+    <div id="planet-info">
+        <h1>Planet Information (Hover The Planet)</h1>
+        <p id="planet-name">Name: Sun</p>
+        <p id="planet-mass">Mass: 1 Solar Mass</p>
+        <p id="planet-radius">Radius: 109 times Earth's Radius</p>
+    </div>
+    <label for="planet-speed" id="speed-label">Speed Adjust:</label>
+    <input type="range" id="planet-speed" min="0.001" max="0.1" step="0.001" value="0.01">
+    <button id="toggle-rotation-button">Stop Rotating</button>
+    <div id="planet-descriptions">
+        <!-- Descriptions will be added here -->
+    </div>
+    <div id="website-links">
+        <h2>Useful Links</h2>
+        <ul>
+            <li><a class="website-link" href="https://www.nasa.gov/" target="_blank">NASA</a></li>
+            <li><a class="website-link" href="https://solarsystem.nasa.gov/" target="_blank">NASA Solar System Exploration</a></li>
+            <li><a class="website-link" href="https://www.space.com/" target="_blank">Space.com</a></li>
+        </ul>
+    </div>
+    <script>
+        const canvas = document.getElementById("solar-system-canvas");
+        const ctx = canvas.getContext("2d");
+
+        const sun = { x: 600, y: 300, radius: 50, color: "yellow" };
+        const planets = [
+            { name: "Mercury", distance: 60, radius: 3, color: "gray", angle: Math.random() * Math.PI * 2, speed: 0.01, mass: "0.055 Solar Masses", planetRadius: "0.383 Earth Radii", description: "Mercury is the smallest and innermost planet in the Solar System." },
+            { name: "Venus", distance: 100, radius: 4, color: "orange", angle: Math.random() * Math.PI * 2, speed: 0.008, mass: "0.815 Solar Masses", planetRadius: "0.949 Earth Radii", description: "Venus is often called Earth's 'sister planet' due to its similar size and composition." },
+            { name: "Earth", distance: 140, radius: 5, color: "blue", angle: Math.random() * Math.PI * 2, speed: 0.005, mass: "1 Solar Mass", planetRadius: "1 Earth Radius", description: "Earth is the only known planet to support life." },
+            { name: "Mars", distance: 180, radius: 4, color: "red", angle: Math.random() * Math.PI * 2, speed: 0.003, mass: "0.107 Solar Masses", planetRadius: "0.532 Earth Radii", description: "Mars is often referred to as the 'Red Planet' due to its reddish appearance." },
+            { name: "Jupiter", distance: 240, radius: 12, color: "orange", angle: Math.random() * Math.PI * 2, speed: 0.001, mass: "317.8 Solar Masses", planetRadius: "11.209 Earth Radii", description: "Jupiter is the largest planet in the Solar System and is a gas giant." },
+            { name: "Saturn", distance: 300, radius: 10, color: "gold", angle: Math.random() * Math.PI * 2, speed: 0.0005, mass: "95.2 Solar Masses", planetRadius: "9.449 Earth Radii", description: "Saturn is known for its prominent ring system, the most extensive in the Solar System." },
+            { name: "Uranus", distance: 360, radius: 7, color: "lightblue", angle: Math.random() * Math.PI * 2, speed: 0.0003, mass: "14.5 Solar Masses", planetRadius: "4.007 Earth Radii", description: "Uranus is an ice giant and has a unique rotation axis tilted on its side." },
+            { name: "Neptune", distance: 420, radius: 6, color: "blue", angle: Math.random() * Math.PI * 2, speed: 0.0002, mass: "17.1 Solar Masses", planetRadius: "3.883 Earth Radii", description: "Neptune is the eighth and farthest known Solar planet from the Sun." }
+        ];
+
+        canvas.width = 1600;  // Adjusted canvas width
+        canvas.height = 600;
+
+        // Speed adjuster for all planets
+        const speedAdjuster = document.getElementById("planet-speed");
+
+        // Variable to track rotation status
+        let rotationStopped = false;
+
+        // Variable to store the currently hovered planet
+        let hoveredPlanet = null;
+
+        // Get the toggle rotation button element
+        const toggleRotationButton = document.getElementById("toggle-rotation-button");
+
+        // Get the planet descriptions container
+        const planetDescriptionsContainer = document.getElementById("planet-descriptions");
+
+        function drawSolarSystem() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the sun
+            ctx.fillStyle = sun.color;
+            ctx.beginPath();
+            ctx.arc(sun.x, sun.y, sun.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (const planet of planets) {
+                if (!rotationStopped) {
+                    planet.angle += parseFloat(speedAdjuster.value); // Adjust speed for all planets
+                }
+
+                const x = sun.x + planet.distance * Math.cos(planet.angle);
+                const y = sun.y + planet.distance * Math.sin(planet.angle);
+
+                ctx.fillStyle = planet.color;
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Label the planet
+                ctx.font = "12px Arial";
+                ctx.fillStyle = "white";
+                ctx.fillText(planet.name, x - 15, y + planet.radius + 15);
+
+                // Check if the cursor is hovering over the planet
+                if (Math.sqrt((x - sun.x) ** 2 + (y - sun.y) ** 2) <= planet.radius) {
+                    hoveredPlanet = planet;
+                    // Change the cursor style when hovering over a planet
+                    canvas.classList.add("planet-hover");
+                }
+            }
+
+            // Update planet information based on the hovered planet
+            if (hoveredPlanet) {
+                document.getElementById("planet-name").textContent = `Name: ${hoveredPlanet.name}`;
+                document.getElementById("planet-mass").textContent = `Mass: ${hoveredPlanet.mass}`;
+                document.getElementById("planet-radius").textContent = `Radius: ${hoveredPlanet.planetRadius}`;
+                // Update the description in the container with a Wikipedia link
+                planetDescriptionsContainer.innerHTML = `
+                    <div class="planet-description">${hoveredPlanet.description}</div>
+                `;
+            } else {
+                // If not hovering over a planet, display sun information
+                document.getElementById("planet-name").textContent = "Name: Sun";
+                document.getElementById("planet-mass").textContent = "Mass: 1 Solar Mass";
+                document.getElementById("planet-radius").textContent = "Radius: 109 times Earth's Radius";
+                // Clear the description container only if a different planet is hovered
+                if (!isAnyPlanetHovered()) {
+                    planetDescriptionsContainer.innerHTML = "";
+                }
+                // Reset cursor style if no planet is hovered
+                if (!isAnyPlanetHovered()) {
+                    canvas.classList.remove("planet-hover");
+                }
+            }
+
+            // Update the button text based on the rotation status
+            toggleRotationButton.textContent = rotationStopped ? "Resume Rotating" : "Stop Rotating";
+
+            requestAnimationFrame(drawSolarSystem);
+        }
+
+        // Function to check if any planet is currently hovered
+        function isAnyPlanetHovered() {
+            return planets.some(planet => planet === hoveredPlanet);
+        }
+
+        // Add event listener for hovering over the canvas
+        canvas.addEventListener("mousemove", (event) => {
+            const mouseX = event.clientX - canvas.getBoundingClientRect().left;
+            const mouseY = event.clientY - canvas.getBoundingClientRect().top;
+
+            for (const planet of planets) {
+                const x = sun.x + planet.distance * Math.cos(planet.angle);
+                const y = sun.y + planet.distance * Math.sin(planet.angle);
+
+                // Check if the cursor is hovering over the planet
+                if (Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2) <= planet.radius) {
+                    hoveredPlanet = planet;
+                    break; // No need to check other planets if hovering over one
+                } else {
+                    hoveredPlanet = null;
+                }
+            }
+        });
+
+        // Adjust speed for all planets when the slider value changes
+        speedAdjuster.addEventListener("input", () => {
+            for (const planet of planets) {
+                planet.speed = parseFloat(speedAdjuster.value);
+            }
+        });
+
+        // Toggle rotation status when the button is clicked
+        toggleRotationButton.addEventListener("click", () => {
+            rotationStopped = !rotationStopped;
+        });
+
+        // Function to get Wikipedia link for a planet
+        function getWikipediaLink(planetName) {
+            // You can replace this with actual Wikipedia links if available
+            const wikipediaLinks = {
+                Mercury: "https://en.wikipedia.org/wiki/Mercury_(planet)",
+                Venus: "https://en.wikipedia.org/wiki/Venus",
+                Earth: "https://en.wikipedia.org/wiki/Earth",
+                Mars: "https://en.wikipedia.org/wiki/Mars",
+                Jupiter: "https://en.wikipedia.org/wiki/Jupiter",
+                Saturn: "https://en.wikipedia.org/wiki/Saturn",
+                Uranus: "https://en.wikipedia.org/wiki/Uranus",
+                Neptune: "https://en.wikipedia.org/wiki/Neptune"
+            };
+            return wikipediaLinks[planetName] || "#";
+        }
+
+        drawSolarSystem();
+    </script>
+</body>
+</html>
